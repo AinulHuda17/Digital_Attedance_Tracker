@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attendance Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 26px;
+            color: #4b3f72;
+            margin: 0;
+        }
+
+        #logoutBtn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background-color: #4b3f72;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .student-list,
+        .attendance-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .student-list {
+            width: 25%;
+        }
+
+        .attendance-section {
+            width: 70%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #ccc;
+        }
+
+        th {
+            background-color: #e0e0f9;
+            color: #4b3f72;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9ff;
+        }
+
+        tr:hover {
+            background-color: #f1f1ff;
+        }
+
+        button {
+            padding: 6px 10px;
+            font-size: 13px;
+            margin: 2px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .present {
+            background-color: #6ab04c;
+            color: white;
+        }
+
+        .absent {
+            background-color: #eb4d4b;
+            color: white;
+        }
+
+        #submitBtn {
+            margin-top: 20px;
+            padding: 10px 18px;
+            background-color: #4b3f72;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f3f0ff;
+            border-radius: 8px;
+            display: none;
+            color: #4b3f72;
+        }
+
+        .date-input {
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .date-input input {
+            padding: 6px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="/" id="logoutBtn">Logout</a>
+
+    <header>
+        <h1>Welcome, {{ username }} — Attendance Dashboard</h1>
+    </header>
+
+    <div class="container">
+        <!-- Student List -->
+        <div class="student-list">
+            <h3 style="color:#4b3f72;">Student List</h3>
+            <table>
+                <tr><th>Name</th><th>Roll</th></tr>
+                <tr><td>ainul</td><td>Roll001</td></tr>
+                <tr><td>jansi</td><td>Roll002</td></tr>
+                <tr><td>uma</td><td>Roll003</td></tr>
+                <tr><td>Shuguftha</td><td>Roll004</td></tr>
+                <tr><td>Kulsum</td><td>Roll005</td></tr>
+                <tr><td>Krish</td><td>Roll006</td></tr>
+                <tr><td>Rishi</td><td>Roll007</td></tr>
+                <tr><td>Raveena</td><td>Roll008</td></tr>
+            </table>
+        </div>
+
+        <!-- Attendance Marking -->
+        <div class="attendance-section">
+            <h3 style="color:#4b3f72;">Mark Attendance</h3>
+            <form onsubmit="submitAttendance(event)">
+                <div class="date-input">
+                    <label for="attendanceDate"><strong>Date:</strong></label>
+                    <input type="date" id="attendanceDate" name="attendanceDate" required>
+                </div>
+
+                <table>
+                    <tr><th>Name</th><th>Roll No</th><th>Status</th></tr>
+                    {% for student in [
+                        ("ainul", "Roll001"), ("jansi", "Roll002"), ("uma", "Roll003"),
+                        ("Shuguftha", "Roll004"), ("Kulsum", "Roll005"),
+                        ("Krish", "Roll006"), ("Rishi", "Roll007"), ("Raveena", "Roll008")
+                    ] %}
+                    <tr>
+                        <td>{{ student[0] }}</td>
+                        <td>{{ student[1] }}</td>
+                        <td>
+                            <button type="button" class="attendance-button" onclick="recordAttendance(this, 'present')">Present</button>
+                            <button type="button" class="attendance-button" onclick="recordAttendance(this, 'absent')">Absent</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+
+                <button id="submitBtn" type="submit">Submit Attendance</button>
+            </form>
+
+            <div class="summary" id="finalSummary">
+                <p>✅ Total Present: <span id="finalPresent">0</span></p>
+                <p>❌ Total Absent: <span id="finalAbsent">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let presentCount = 0;
+        let absentCount = 0;
+        let locked = false;
+
+        function recordAttendance(button, status) {
+            if (locked || button.disabled) return;
+
+            const btns = button.parentElement.querySelectorAll('.attendance-button');
+            btns.forEach(b => b.disabled = true);
+
+            if (status === 'present') {
+                presentCount++;
+                button.classList.add('present');
+            } else {
+                absentCount++;
+                button.classList.add('absent');
+            }
+        }
+
+        function submitAttendance(event) {
+            event.preventDefault();
+            locked = true;
+
+            document.getElementById('finalSummary').style.display = 'block';
+            document.getElementById('finalPresent').innerText = presentCount;
+            document.getElementById('finalAbsent').innerText = absentCount;
+
+            // Disable remaining buttons
+            document.querySelectorAll('.attendance-button').forEach(btn => btn.disabled = true);
+        }
+    </script>
+
+</body>
+</html>
